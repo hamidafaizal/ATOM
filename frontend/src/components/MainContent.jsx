@@ -1,30 +1,24 @@
 import React from 'react';
 import Dashboard from './dashboard/Dashboar.jsx'; 
-import HPManage from './hpmanage/HPManage.jsx';
-import NomerSellulerManage from './nomersellulermanage/NomerSellulerManage.jsx';
-import AkunShopee from './akunshopee/AkunShopee.jsx';
-import AkunNPWP from './akunnpwp/AkunNPWP.jsx';
-// DIUBAH: Mengimpor komponen baru
-import LaporanKeuangan from './laporankeuangan/LaporanKeuangan.jsx';
+import DetailKaryawan from './detailkaryawan/DetailKaryawan.jsx';
+import ExportSlipGaji from './exportslipgaji/ExportSlipGaji.jsx';
+// DIUBAH: Impor komponen baru
+import Pengaturan from './pengaturan/Pengaturan.jsx';
 import { Search, List, Settings, UserCircle, Grid } from 'lucide-react';
 
 const MainContent = ({ activePage }) => {
 
     const renderContent = () => {
-        // DIUBAH: Logika switch diperbarui
+        // DIUBAH: Logika switch diperbarui untuk menangani halaman baru
         switch (activePage) {
             case 'Dashboard':
                 return <Dashboard />;
-            case 'HP Manage':
-                return <HPManage />;
-            case 'Nomer Selluler Manage':
-                return <NomerSellulerManage />;
-            case 'Akun Shopee':
-                return <AkunShopee />;
-            case 'Akun NPWP':
-                return <AkunNPWP />;
-            case 'Laporan Keuangan':
-                return <LaporanKeuangan />;
+            case 'Detail Karyawan':
+                return <DetailKaryawan />;
+            case 'Export Slip Gaji':
+                return <ExportSlipGaji />;
+            case 'Pengaturan':
+                return <Pengaturan />;
             default:
                 return <Dashboard />;
         }

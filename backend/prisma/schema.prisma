@@ -10,28 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Model untuk tabel Karyawan
 model Karyawan {
-  id           Int      @id @default(autoincrement())
-  telegram_id  BigInt   @unique
+  id           Int       @id @default(autoincrement())
+  telegram_id  BigInt    @unique
   nama_lengkap String
   jabatan      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relasi: Satu karyawan bisa memiliki banyak data absensi
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   absensi      Absensi[]
 }
 
-// Model BARU untuk tabel Absensi
 model Absensi {
-  id          Int      @id @default(autoincrement())
-  tipe        String   // Akan berisi 'MASUK' atau 'KELUAR'
-  latitude    Float
-  longitude   Float
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  tipe       String // "MASUK" atau "KELUAR"
+  latitude   Float
+  longitude  Float
+  createdAt  DateTime @default(now())
+  karyawan   Karyawan @relation(fields: [karyawanId], references: [id])
+  karyawanId Int
+}
 
-  // Relasi: Setiap data absensi dimiliki oleh satu karyawan
-  karyawan    Karyawan @relation(fields: [karyawanId], references: [id])
-  karyawanId  Int
+// DITAMBAHKAN: Model baru untuk menyimpan pengaturan aplikasi
+model Pengaturan {
+  id        Int     @id @default(autoincrement())
+  nama      String  @unique // contoh: "jam_lembur_minggu"
+  nilai     String  // contoh: "4"
+  deskripsi String?
 }
