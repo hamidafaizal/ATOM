@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Model untuk tabel Karyawan
+model Karyawan {
+  id           Int      @id @default(autoincrement())
+  telegram_id  BigInt   @unique
+  nama_lengkap String
+  jabatan      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relasi: Satu karyawan bisa memiliki banyak data absensi
+  absensi      Absensi[]
+}
+
+// Model BARU untuk tabel Absensi
+model Absensi {
+  id          Int      @id @default(autoincrement())
+  tipe        String   // Akan berisi 'MASUK' atau 'KELUAR'
+  latitude    Float
+  longitude   Float
+  createdAt   DateTime @default(now())
+
+  // Relasi: Setiap data absensi dimiliki oleh satu karyawan
+  karyawan    Karyawan @relation(fields: [karyawanId], references: [id])
+  karyawanId  Int
+}
