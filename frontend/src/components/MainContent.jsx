@@ -2,14 +2,15 @@ import React from 'react';
 import Dashboard from './dashboard/Dashboar.jsx'; 
 import DetailKaryawan from './detailkaryawan/DetailKaryawan.jsx';
 import ExportSlipGaji from './exportslipgaji/ExportSlipGaji.jsx';
-// DIUBAH: Impor komponen baru
 import Pengaturan from './pengaturan/Pengaturan.jsx';
-import { Search, List, Settings, UserCircle, Grid } from 'lucide-react';
+import { Search, List, Settings, UserCircle, Grid, Sun, Moon } from 'lucide-react';
+// DIUBAH: Path impor diperbaiki
+import { useTheme } from '../context/ThemeContext.jsx'; 
 
 const MainContent = ({ activePage }) => {
+    const { theme, toggleTheme } = useTheme();
 
     const renderContent = () => {
-        // DIUBAH: Logika switch diperbarui untuk menangani halaman baru
         switch (activePage) {
             case 'Dashboard':
                 return <Dashboard />;
@@ -33,17 +34,14 @@ const MainContent = ({ activePage }) => {
                     </div>
                     <input
                         type="search"
-                        placeholder="Search in Drive"
-                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                        placeholder="Cari..."
+                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
                     />
                 </div>
                 
                 <div className="flex items-center gap-2">
-                     <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        <List className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        <Grid className="w-5 h-5" />
+                    <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
+                        {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     </button>
                      <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
                         <Settings className="w-5 h-5" />

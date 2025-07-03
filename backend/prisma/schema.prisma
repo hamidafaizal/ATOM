@@ -10,30 +10,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// DITAMBAHKAN: Model untuk User/Akun Perusahaan
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  namaPerusahaan String
+  // DIUBAH: Menghapus @db.Text agar bisa menjadi unik
+  botToken      String   @unique
+  
+  // Relasi ke data lain
+  karyawan      Karyawan[]
+  tipeGaji      TipeGaji[]
+  pengaturan    Pengaturan[]
+}
+
 model Karyawan {
-  id           Int       @id @default(autoincrement())
-  telegram_id  BigInt    @unique
+  id           Int      @id @default(autoincrement())
+  telegram_id  BigInt   @unique
   nama_lengkap String
   jabatan      String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   absensi      Absensi[]
+
+  tipeGajiId   Int?
+  tipeGaji     TipeGaji? @relation(fields: [tipeGajiId], references: [id])
+
+  // DITAMBAHKAN: Relasi ke User pemilik
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 model Absensi {
   id         Int      @id @default(autoincrement())
-  tipe       String // "MASUK" atau "KELUAR"
+  tipe       String
   latitude   Float
   longitude  Float
   createdAt  DateTime @default(now())
-  karyawan   Karyawan @relation(fields: [karyawanId], references: [id])
   karyawanId Int
+  karyawan   Karyawan @relation(fields: [karyawanId], references: [id], onDelete: Cascade)
 }
 
-// DITAMBAHKAN: Model baru untuk menyimpan pengaturan aplikasi
 model Pengaturan {
   id        Int     @id @default(autoincrement())
-  nama      String  @unique // contoh: "jam_lembur_minggu"
-  nilai     String  // contoh: "4"
+  nama      String  // Tidak lagi unik secara global
+  nilai     String
   deskripsi String?
+
+  // DITAMBAHKAN: Relasi ke User pemilik
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+
+  // Pengaturan sekarang unik per user
+  @@unique([nama, userId])
+}
+
+model TipeGaji {
+  id                  Int      @id @default(autoincrement())
+  nama                String
+  model_perhitungan   String
+  nilai_gaji_dasar    Float?
+  potongan_tidak_masuk Float?
+  tarif_lembur_per_jam Float?
+  
+  aturan_tarif_per_jam String?  @db.Text
+
+  karyawan            Karyawan[]
+
+  // DITAMBAHKAN: Relasi ke User pemilik
+  userId              Int
+  user                User     @relation(fields: [userId], references: [id])
 }
