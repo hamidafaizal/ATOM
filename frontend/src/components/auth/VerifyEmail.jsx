@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { Sun, Moon, Loader2, KeyRound } from 'lucide-react';
-import apiClient from '../../api'; // Impor apiClient
+import apiClient from '../../api';
+import toast from 'react-hot-toast'; // Pastikan toast diimpor
 
-/**
- * Komponen untuk halaman verifikasi email menggunakan kode.
- */
 const VerifyEmail = ({ email, onNavigateToLogin }) => {
   const [code, setCode] = useState(new Array(6).fill(""));
   const [error, setError] = useState(null);
@@ -56,29 +54,35 @@ const VerifyEmail = ({ email, onNavigateToLogin }) => {
 
     const verificationCode = code.join('');
     
-    // --- LOGIKA DIUBAH: MENGGUNAKAN PANGGILAN API SUNGGUHAN ---
     try {
       await apiClient.post('/auth/verify-email', { email, token: verificationCode });
-      alert('Verifikasi berhasil! Anda akan diarahkan ke halaman login.');
-      onNavigateToLogin();
+      
+      // DIUBAH: Menggunakan toast.success alih-alih alert()
+      toast.success('Verifikasi berhasil! Anda akan diarahkan ke halaman login.');
+
+      setTimeout(() => {
+        onNavigateToLogin();
+      }, 1500);
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Verifikasi gagal. Kode salah atau sudah kedaluwarsa.');
+      const errorMessage = err.response?.data?.message || 'Verifikasi gagal. Kode salah atau sudah kedaluwarsa.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-    // --- AKHIR PERUBAHAN ---
   };
   
-  // Fungsi untuk mengirim ulang kode verifikasi
   const handleResendCode = async () => {
     setLoading(true);
     setError(null);
     try {
-        // Endpoint ini perlu dibuat di backend jika ingin fungsional
         // await apiClient.post('/auth/resend-verification', { email });
-        alert(`(Simulasi) Kode baru telah dikirim ke ${email}.`);
+        toast.success(`(Simulasi) Kode baru telah dikirim ke ${email}.`);
     } catch (err) {
-        setError(err.response?.data?.message || 'Gagal mengirim ulang kode.');
+        const errorMessage = err.response?.data?.message || 'Gagal mengirim ulang kode.';
+        setError(errorMessage);
+        toast.error(errorMessage);
     } finally {
         setLoading(false);
     }

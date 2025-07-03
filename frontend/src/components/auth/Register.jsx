@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, Mail, Lock, Bot, Loader2, ArrowLeft } from 'lucide-react';
-import apiClient from '../../api'; // Impor apiClient
+import { Sun, Moon, Mail, Lock, Bot, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import apiClient from '../../api';
 
-/**
- * Komponen untuk halaman pendaftaran pengguna baru.
- */
 const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
   const [formData, setFormData] = useState({
     namaPerusahaan: '',
@@ -13,6 +10,10 @@ const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
     password: '',
     botToken: '',
   });
+  // DITAMBAHKAN: State untuk konfirmasi password
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -25,21 +26,22 @@ const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    // --- LOGIKA DIUBAH: MENGGUNAKAN PANGGILAN API SUNGGUHAN ---
+    // DITAMBAHKAN: Validasi kecocokan password
+    if (formData.password !== confirmPassword) {
+      setError('Password dan Konfirmasi Password tidak cocok.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      // Mengirim data pendaftaran ke endpoint backend
       await apiClient.post('/auth/register', formData);
-      // Jika berhasil, panggil onRegisterSuccess untuk pindah halaman
       onRegisterSuccess(formData.email);
     } catch (err) {
-      // Tangkap dan tampilkan error dari backend
       setError(err.response?.data?.message || 'Registrasi gagal. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
-    // --- AKHIR PERUBAHAN ---
   };
 
   return (
@@ -55,7 +57,6 @@ const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
           <p className="mt-2 text-gray-500 dark:text-gray-400">Mulai kelola gaji karyawan Anda dengan ATOM.</p>
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          {/* Input Nama Perusahaan */}
           <div>
             <label htmlFor="namaPerusahaan" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Nama Perusahaan
@@ -71,7 +72,6 @@ const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
               placeholder="Contoh: PT. Sejahtera Abadi"
             />
           </div>
-          {/* Input Email */}
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Alamat Email
@@ -87,23 +87,60 @@ const Register = ({ onNavigateToLogin, onRegisterSuccess }) => {
               placeholder="anda@perusahaan.com"
             />
           </div>
-          {/* Input Password */}
+          
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              value={formData.password}
-              onChange={handleChange}
-              className="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm"
-              placeholder="••••••••"
-            />
+            <div className="relative mt-1">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={formData.password}
+                onChange={handleChange}
+                className="block w-full px-4 py-3 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
-          {/* Input Token Bot */}
+
+          {/* DITAMBAHKAN: Input untuk Konfirmasi Password */}
+          <div>
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Konfirmasi Password
+            </label>
+            <div className="relative mt-1">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="block w-full px-4 py-3 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
+                aria-label="Toggle confirm password visibility"
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="botToken" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Token Bot Telegram

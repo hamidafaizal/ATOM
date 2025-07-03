@@ -23,16 +23,18 @@ apiClient.interceptors.request.use(
 );
 
 // Menambahkan interceptor untuk response (opsional tapi sangat berguna)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Jika mendapat error 401 (Unauthorized), otomatis logout pengguna
-    if (error.response && error.response.status === 401) {
-      // Hapus token dan refresh halaman untuk kembali ke login
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login'; 
+apiClient.interceptors.request.use(
+  (config) => {
+    // DIUBAH: Mengambil token dari sessionStorage agar konsisten
+    const token = sessionStorage.getItem('authToken');
+    
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    return config;
+  },
+  (error) => {
     return Promise.reject(error);
   }
 );

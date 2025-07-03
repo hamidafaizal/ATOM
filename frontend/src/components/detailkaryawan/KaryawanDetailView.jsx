@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit, ChevronDown, ChevronUp, Trash2, Save, Loader2, Plus, Check, X as XIcon } from 'lucide-react';
 import EditJabatanModal from './EditJabatanModal.jsx';
-import apiClient from '../../api.js'; // DIUBAH
+import apiClient from '../../api.js';
+import toast from 'react-hot-toast'; // DITAMBAHKAN
 
 const DetailItem = ({ label, value, onEdit, isEditable }) => (
   <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -90,16 +91,17 @@ const AbsensiTable = ({ karyawanId }) => {
     const handleSave = async (data) => {
         try {
             await apiClient.post('/absensi/harian', { ...data, karyawanId });
+            toast.success('Absensi berhasil disimpan.'); // DIUBAH
             fetchAbsensi(); 
         } catch (error) {
             console.error("Gagal menyimpan absensi:", error);
-            alert("Gagal menyimpan absensi.");
+            toast.error("Gagal menyimpan absensi."); // DIUBAH
         }
     };
 
     const handleAddNew = async () => {
         if (!newData.tanggal) {
-            alert("Tanggal wajib diisi.");
+            toast.error("Tanggal wajib diisi."); // DIUBAH
             return;
         }
         await handleSave(newData);
@@ -118,10 +120,11 @@ const AbsensiTable = ({ karyawanId }) => {
                     idMasuk: itemToDelete.idMasuk,
                     idKeluar: itemToDelete.idKeluar,
                 });
+                toast.success('Sesi absensi berhasil dihapus.'); // DIUBAH
                 fetchAbsensi();
             } catch (error) {
                 console.error("Gagal menghapus sesi absensi:", error);
-                alert("Gagal menghapus sesi.");
+                toast.error("Gagal menghapus sesi."); // DIUBAH
             }
         }
     };
@@ -191,10 +194,11 @@ const KaryawanDetailView = ({ karyawan, onBack }) => {
     try {
       const response = await apiClient.patch(`/karyawan/${currentKaryawan.id}`, { jabatan: newJabatan });
       setCurrentKaryawan(prev => ({...prev, ...response.data}));
+      toast.success('Jabatan berhasil diperbarui.'); // DIUBAH
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Gagal menyimpan jabatan:", error);
-      alert("Gagal menyimpan perubahan jabatan.");
+      toast.error("Gagal menyimpan perubahan jabatan."); // DIUBAH
     }
   };
 
@@ -202,11 +206,11 @@ const KaryawanDetailView = ({ karyawan, onBack }) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus karyawan ${currentKaryawan.nama_lengkap}? Operasi ini tidak bisa dibatalkan.`)) {
       try {
         await apiClient.delete(`/karyawan/${currentKaryawan.id}`);
-        alert(`Karyawan ${currentKaryawan.nama_lengkap} telah dihapus.`);
+        toast.success(`Karyawan ${currentKaryawan.nama_lengkap} telah dihapus.`); // DIUBAH
         onBack();
       } catch (error) {
         console.error("Gagal menghapus karyawan:", error);
-        alert(error.response?.data?.message || "Gagal menghapus karyawan.");
+        toast.error(error.response?.data?.message || "Gagal menghapus karyawan."); // DIUBAH
       }
     }
   };
@@ -221,10 +225,10 @@ const KaryawanDetailView = ({ karyawan, onBack }) => {
       const response = await apiClient.patch(`/karyawan/${currentKaryawan.id}`, { tipeGajiId: selectedTipeGaji });
       setCurrentKaryawan(prev => ({...prev, ...response.data}));
       setIsTipeGajiDirty(false);
-      alert("Tipe gaji berhasil diperbarui.");
+      toast.success("Tipe gaji berhasil diperbarui."); // DIUBAH
     } catch (error) {
       console.error("Gagal menyimpan tipe gaji:", error);
-      alert("Gagal menyimpan perubahan tipe gaji.");
+      toast.error("Gagal menyimpan perubahan tipe gaji."); // DIUBAH
     }
   };
 

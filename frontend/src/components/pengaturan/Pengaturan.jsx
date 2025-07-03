@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, X, Loader2 } from 'lucide-react';
-import apiClient from '../../api'; // DIUBAH
+import apiClient from '../../api';
+import toast from 'react-hot-toast'; // DITAMBAHKAN
 
-// ... (Komponen Modal tidak berubah signifikan)
+// Komponen Modal
 const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
-    
     const [formData, setFormData] = useState({});
 
     useEffect(() => {
@@ -14,14 +14,13 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
             nilai_gaji_dasar: 0,
             aturan_tarif_per_jam: [{ mulai: '', selesai: '', tarif: 0 }],
             tarif_lembur_per_jam: 0,
-            potongan_tidak_masuk: 0, 
+            potongan_tidak_masuk: 0,
         };
-        
         if (tipeGajiData) {
             const parsedData = {
                 ...tipeGajiData,
-                aturan_tarif_per_jam: typeof tipeGajiData.aturan_tarif_per_jam === 'string' 
-                    ? JSON.parse(tipeGajiData.aturan_tarif_per_jam) 
+                aturan_tarif_per_jam: typeof tipeGajiData.aturan_tarif_per_jam === 'string'
+                    ? JSON.parse(tipeGajiData.aturan_tarif_per_jam)
                     : tipeGajiData.aturan_tarif_per_jam || [{ mulai: '', selesai: '', tarif: 0 }],
             };
             setFormData({ ...initialData, ...parsedData });
@@ -43,7 +42,7 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
         newAturan[index][name] = value;
         setFormData(prev => ({ ...prev, aturan_tarif_per_jam: newAturan }));
     };
-    
+
     const tambahAturanTarif = () => {
         setFormData(prev => ({
             ...prev,
@@ -62,7 +61,7 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="relative w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl p-6 m-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between pb-4 border-b dark:border-gray-700">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -70,13 +69,11 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white"><X size={24} /></button>
                 </div>
-                
                 <form onSubmit={handleSave} className="mt-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                     <div>
                         <label htmlFor="nama" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nama Tipe Gaji</label>
                         <input type="text" name="nama" value={formData.nama || ''} onChange={handleChange} className="mt-1 block w-full rounded-md dark:bg-gray-700" required />
                     </div>
-                    
                     <div>
                         <label htmlFor="model_perhitungan" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Model Perhitungan</label>
                         <select name="model_perhitungan" value={formData.model_perhitungan || 'BULANAN'} onChange={handleChange} className="mt-1 block w-full rounded-md dark:bg-gray-700">
@@ -85,7 +82,6 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
                             <option value="PER_JAM_BERTINGKAT">Per Jam (Bertingkat)</option>
                         </select>
                     </div>
-
                     {formData.model_perhitungan === 'PER_JAM_BERTINGKAT' ? (
                         <div className="p-4 border border-dashed rounded-md dark:border-gray-600 space-y-4">
                             <h4 className="font-semibold text-gray-800 dark:text-white">Aturan Tarif per Jam</h4>
@@ -119,7 +115,6 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
                             <input type="number" name="nilai_gaji_dasar" value={formData.nilai_gaji_dasar || 0} onChange={handleChange} className="mt-1 block w-full rounded-md dark:bg-gray-700" required />
                         </div>
                     )}
-
                     {formData.model_perhitungan !== 'PER_JAM_BERTINGKAT' && (
                         <>
                             <hr className="dark:border-gray-700"/>
@@ -129,7 +124,6 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
                             </div>
                         </>
                     )}
-
                     {formData.model_perhitungan === 'BULANAN' && (
                         <div>
                             <label htmlFor="potongan_tidak_masuk" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Potongan Gaji per Hari (Tidak Masuk)</label>
@@ -137,7 +131,6 @@ const TipeGajiModal = ({ isOpen, onClose, onSave, tipeGajiData }) => {
                         </div>
                     )}
                 </form>
-
                 <div className="pt-6 flex justify-end space-x-3 border-t dark:border-gray-700 mt-6">
                     <button type="button" onClick={onClose} className="rounded-md border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600">Batal</button>
                     <button type="submit" onClick={handleSave} className="rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700">Simpan</button>
@@ -157,7 +150,7 @@ const ManajemenTipeGaji = () => {
     const fetchTipeGaji = async () => {
         try {
             setLoading(true);
-            const response = await apiClient.get('/tipegaji'); // DIUBAH
+            const response = await apiClient.get('/tipegaji');
             setTipeGajiList(response.data);
             setError(null);
         } catch (err) {
@@ -184,27 +177,38 @@ const ManajemenTipeGaji = () => {
 
     const handleSave = async (formData) => {
         try {
-            if (formData.id) {
-                await apiClient.put(`/tipegaji/${formData.id}`, formData); // DIUBAH
+            // Membuat salinan data untuk dimodifikasi
+            const dataToSave = { ...formData };
+
+            // Jika model bukan PER_JAM_BERTINGKAT, hapus aturan tarif
+            if (dataToSave.model_perhitungan !== 'PER_JAM_BERTINGKAT') {
+                delete dataToSave.aturan_tarif_per_jam;
+            }
+
+            if (dataToSave.id) {
+                await apiClient.put(`/tipegaji/${dataToSave.id}`, dataToSave);
+                toast.success('Tipe gaji berhasil diperbarui.');
             } else {
-                await apiClient.post('/tipegaji', formData); // DIUBAH
+                await apiClient.post('/tipegaji', dataToSave);
+                toast.success('Tipe gaji baru berhasil ditambahkan.');
             }
             setIsModalOpen(false);
             fetchTipeGaji();
         } catch (err) {
             console.error("Gagal menyimpan tipe gaji:", err);
-            alert("Gagal menyimpan data. Periksa kembali isian Anda.");
+            toast.error("Gagal menyimpan data. Periksa kembali isian Anda.");
         }
     };
-    
+
     const handleDelete = async (id) => {
         if (window.confirm("Apakah Anda yakin ingin menghapus tipe gaji ini?")) {
             try {
-                await apiClient.delete(`/tipegaji/${id}`); // DIUBAH
+                await apiClient.delete(`/tipegaji/${id}`);
+                toast.success('Tipe gaji berhasil dihapus.');
                 fetchTipeGaji();
             } catch (err) {
                 console.error("Gagal menghapus tipe gaji:", err);
-                alert(err.response?.data?.message || "Gagal menghapus data.");
+                toast.error(err.response?.data?.message || "Gagal menghapus data.");
             }
         }
     }
@@ -241,9 +245,9 @@ const ManajemenTipeGaji = () => {
                     </div>
                 ))}
             </div>
-            <TipeGajiModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <TipeGajiModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
                 onSave={handleSave}
                 tipeGajiData={editingTipeGaji}
             />
@@ -252,14 +256,14 @@ const ManajemenTipeGaji = () => {
 };
 
 const Pengaturan = () => {
-  return (
-    <div className="p-6 md:p-8">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-        Pengaturan Aplikasi
-      </h1>
-      <ManajemenTipeGaji />
-    </div>
-  );
+    return (
+        <div className="p-6 md:p-8">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+                Pengaturan Aplikasi
+            </h1>
+            <ManajemenTipeGaji />
+        </div>
+    );
 };
 
 export default Pengaturan;

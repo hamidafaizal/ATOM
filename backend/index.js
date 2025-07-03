@@ -24,7 +24,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => { // DIUBAH menjadi async
     const authHeader = req.headers['authorization'];
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -35,10 +35,21 @@ const authMiddleware = (req, res, next) => {
     
     try {
         const payload = verifyJwt(token);
-        if (!payload) {
+        if (!payload || !payload.id) {
             return res.status(401).json({ message: 'Token tidak valid atau kedaluwarsa.' });
         }
-        req.userId = payload.id;
+
+        // PENGECEKAN PENTING: Pastikan user masih ada di database
+        const user = await prisma.user.findUnique({
+            where: { id: payload.id },
+        });
+
+        if (!user) {
+            // Jika user tidak ditemukan, token ini tidak valid lagi
+            return res.status(401).json({ message: 'Sesi tidak valid. Silakan login kembali.' });
+        }
+
+        req.userId = user.id; // Gunakan ID dari user yang terverifikasi
         next();
     } catch (error) {
         return res.status(401).json({ message: 'Token tidak valid.' });
@@ -60,37 +71,54 @@ app.get('/api/tipegaji', async (req, res) => {
 });
 
 app.post('/api/tipegaji', async (req, res) => {
-    const data = { ...req.body, userId: req.userId };
+    const { body, userId } = req;
+
+    console.log('Mencoba membuat TipeGaji dengan userId:', userId); // TAMBAHKAN BARIS INI
+
     try {
-        const newTipeGaji = await prisma.tipeGaji.create({
-            data: {
-                ...data,
-                nilai_gaji_dasar: data.nilai_gaji_dasar ? parseFloat(data.nilai_gaji_dasar) : null,
-                potongan_tidak_masuk: data.potongan_tidak_masuk ? parseFloat(data.potongan_tidak_masuk) : null,
-                tarif_lembur_per_jam: data.tarif_lembur_per_jam ? parseFloat(data.tarif_lembur_per_jam) : null,
-                aturan_tarif_per_jam: (data.model_perhitungan === 'PER_JAM_BERTINGKAT' && data.aturan_tarif_per_jam) ? JSON.stringify(data.aturan_tarif_per_jam) : null,
-            }
-        });
+        // Susun data secara eksplisit untuk memastikan integritas
+        const dataForDb = {
+            userId: userId, // Pastikan userId dari middleware disertakan
+            nama: body.nama,
+            model_perhitungan: body.model_perhitungan,
+            nilai_gaji_dasar: body.nilai_gaji_dasar ? parseFloat(body.nilai_gaji_dasar) : null,
+            potongan_tidak_masuk: body.potongan_tidak_masuk ? parseFloat(body.potongan_tidak_masuk) : null,
+            tarif_lembur_per_jam: body.tarif_lembur_per_jam ? parseFloat(body.tarif_lembur_per_jam) : null,
+            aturan_tarif_per_jam: (body.model_perhitungan === 'PER_JAM_BERTINGKAT' && body.aturan_tarif_per_jam) ? JSON.stringify(body.aturan_tarif_per_jam) : null,
+        };
+
+        const newTipeGaji = await prisma.tipeGaji.create({ data: dataForDb });
         res.status(201).json(newTipeGaji);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        console.error('POST /tipegaji error:', error);
+        res.status(500).json({ message: 'Gagal membuat tipe gaji baru.' }); 
+    }
 });
 
 app.put('/api/tipegaji/:id', async (req, res) => {
     const { id } = req.params;
-    const data = { ...req.body };
+    const { body, userId } = req;
+
     try {
+        // Susun data yang akan diupdate secara eksplisit
+        const dataForUpdate = {
+            nama: body.nama,
+            model_perhitungan: body.model_perhitungan,
+            nilai_gaji_dasar: body.nilai_gaji_dasar ? parseFloat(body.nilai_gaji_dasar) : null,
+            potongan_tidak_masuk: body.potongan_tidak_masuk ? parseFloat(body.potongan_tidak_masuk) : null,
+            tarif_lembur_per_jam: body.tarif_lembur_per_jam ? parseFloat(body.tarif_lembur_per_jam) : null,
+            aturan_tarif_per_jam: (body.model_perhitungan === 'PER_JAM_BERTINGKAT' && body.aturan_tarif_per_jam) ? JSON.stringify(body.aturan_tarif_per_jam) : null,
+        };
+
         const updatedTipeGaji = await prisma.tipeGaji.update({
-            where: { id: parseInt(id), userId: req.userId },
-            data: {
-                ...data,
-                 nilai_gaji_dasar: data.nilai_gaji_dasar ? parseFloat(data.nilai_gaji_dasar) : null,
-                potongan_tidak_masuk: data.potongan_tidak_masuk ? parseFloat(data.potongan_tidak_masuk) : null,
-                tarif_lembur_per_jam: data.tarif_lembur_per_jam ? parseFloat(data.tarif_lembur_per_jam) : null,
-                aturan_tarif_per_jam: (data.model_perhitungan === 'PER_JAM_BERTINGKAT' && data.aturan_tarif_per_jam) ? JSON.stringify(data.aturan_tarif_per_jam) : null,
-            }
+            where: { id: parseInt(id), userId: userId }, // Otorisasi: pastikan user hanya mengubah miliknya
+            data: dataForUpdate,
         });
         res.json(updatedTipeGaji);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        console.error('PUT /tipegaji/:id error:', error);
+        res.status(500).json({ message: 'Gagal memperbarui tipe gaji.' }); 
+    }
 });
 
 app.delete('/api/tipegaji/:id', async (req, res) => {

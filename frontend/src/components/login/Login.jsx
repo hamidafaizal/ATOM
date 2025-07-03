@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, LogIn, Loader2, Mail, Lock } from 'lucide-react';
+import { Sun, Moon, LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Login = ({ onNavigateToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // State untuk visibilitas password
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -16,9 +17,6 @@ const Login = ({ onNavigateToRegister }) => {
     setError(null);
     setLoading(true);
     try {
-      // =================================================================
-      // === PERBAIKAN: Mengirim email DAN password ke fungsi login ====
-      // =================================================================
       await login(email, password);
     } catch (err) {
       setError(err.response?.data?.message || 'Login gagal. Periksa kembali email dan password Anda.');
@@ -57,21 +55,32 @@ const Login = ({ onNavigateToRegister }) => {
             />
           </div>
           
+          {/* DITAMBAHKAN: Input Password dengan Tombol Visibilitas */}
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              placeholder="••••••••"
-            />
+            <div className="relative mt-1">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full px-4 py-3 pr-10 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           {error && (
