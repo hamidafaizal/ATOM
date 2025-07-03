@@ -1,27 +1,41 @@
 import axios from 'axios';
 
-// Membuat instance axios dengan konfigurasi dasar
 const apiClient = axios.create({
-  baseURL: 'http://localhost:3001/api', // Semua request akan diawali dengan path ini
+  baseURL: 'http://localhost:3001/api',
 });
 
-// Interceptor: Kode ini akan berjalan SEBELUM setiap request dikirim
+// Interceptor BARU: Menggunakan token JWT untuk otentikasi
 apiClient.interceptors.request.use(
   (config) => {
-    // Mengambil data user yang tersimpan di localStorage
-    const user = JSON.parse(localStorage.getItem('user'));
+    // Mengambil token dari localStorage
+    const token = localStorage.getItem('authToken');
     
-    // Jika user ada dan memiliki ID, tambahkan ID tersebut ke header
-    if (user && user.id) {
-      config.headers['x-user-id'] = user.id;
+    // Jika token ada, tambahkan ke header Authorization
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     
-    return config; // Lanjutkan request dengan header yang sudah ditambahkan
+    return config;
   },
   (error) => {
-    // Lakukan sesuatu jika ada error pada konfigurasi request
     return Promise.reject(error);
   }
 );
+
+// Menambahkan interceptor untuk response (opsional tapi sangat berguna)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Jika mendapat error 401 (Unauthorized), otomatis logout pengguna
+    if (error.response && error.response.status === 401) {
+      // Hapus token dan refresh halaman untuk kembali ke login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login'; 
+    }
+    return Promise.reject(error);
+  }
+);
+
 
 export default apiClient;

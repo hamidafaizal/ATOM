@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import MainContent from './components/MainContent.jsx';
-import Login from './components/login/Login.jsx'; // DITAMBAHKAN
-import { useAuth } from './context/AuthContext.jsx'; // DITAMBAHKAN
+import AuthPage from './components/auth/AuthPage.jsx'; // DIUBAH: Impor AuthPage
+import { useAuth } from './context/AuthContext.jsx';
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard');
-  const { isAuthenticated } = useAuth(); // DITAMBAHKAN
+  const { isAuthenticated } = useAuth();
 
-  // Jika pengguna tidak terautentikasi, tampilkan halaman Login
+  // Jika pengguna tidak terautentikasi, tampilkan alur otentikasi (Login/Register/Verify)
   if (!isAuthenticated) {
-    return <Login />;
+    // DIUBAH: Menggunakan AuthPage sebagai pintu masuk otentikasi
+    return <AuthPage />;
   }
 
   // Jika terautentikasi, tampilkan aplikasi utama

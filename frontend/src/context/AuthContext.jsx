@@ -1,27 +1,46 @@
-import React, { createContext, useState, useContext } from 'react';
-import axios from 'axios'; // Kita pakai axios biasa khusus untuk login
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import apiClient from '../api';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem('user');
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      console.error("Gagal parse user dari localStorage", error);
-      return null;
-    }
-  });
+  // DIUBAH: Mengambil token dari sessionStorage
+  const [token, setToken] = useState(() => sessionStorage.getItem('authToken'));
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = async (username) => {
+  useEffect(() => {
+    const validateToken = () => {
+      if (token) {
+        try {
+          // DIUBAH: Mengambil data user dari sessionStorage
+          const storedUser = JSON.parse(sessionStorage.getItem('user'));
+          if (storedUser) {
+            setUser(storedUser);
+          } else {
+            logout();
+          }
+        } catch (e) {
+          logout();
+        }
+      }
+      setLoading(false);
+    };
+    validateToken();
+  }, [token]);
+
+  const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:3001/api/login', { username });
-      const userData = response.data;
+      const response = await apiClient.post('/auth/login', { email, password });
+      const { token: newToken, user: userData } = response.data;
       
-      localStorage.setItem('user', JSON.stringify(userData));
+      // DIUBAH: Menyimpan token dan user ke sessionStorage
+      sessionStorage.setItem('authToken', newToken);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      
+      setToken(newToken);
       setUser(userData);
     } catch (error) {
       console.error("Login gagal:", error);
@@ -30,16 +49,24 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    // DIUBAH: Menghapus data dari sessionStorage
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('user');
+    setToken(null);
     setUser(null);
   };
 
   const value = {
     user,
-    isAuthenticated: !!user,
+    token,
+    isAuthenticated: !!token && !!user,
     login,
     logout,
   };
+  
+  if (loading) {
+    return null;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

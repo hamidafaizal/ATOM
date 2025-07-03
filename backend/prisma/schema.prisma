@@ -10,35 +10,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// DITAMBAHKAN: Model untuk User/Akun Perusahaan
+// =================================================================
+// === MODEL USER YANG DIPERBARUI ==================================
+// =================================================================
 model User {
-  id            Int      @id @default(autoincrement())
-  username      String   @unique
-  namaPerusahaan String
-  // DIUBAH: Menghapus @db.Text agar bisa menjadi unik
-  botToken      String   @unique
-  
-  // Relasi ke data lain
-  karyawan      Karyawan[]
-  tipeGaji      TipeGaji[]
-  pengaturan    Pengaturan[]
+  id                     Int       @id @default(autoincrement())
+  namaPerusahaan         String
+  email                  String    @unique
+  password               String    @db.Text // Disimpan sebagai hash yang panjang
+
+  // Kolom untuk enkripsi token bot
+  botToken               String    @db.Text // Akan berisi token yang sudah dienkripsi
+  botTokenIv             String    // Initialization Vector untuk keamanan enkripsi
+
+  // Kolom untuk verifikasi email
+  emailVerificationToken String?   @unique
+  emailVerifiedAt        DateTime?
+
+  // Relasi ke model lain
+  karyawan               Karyawan[]
+  pengaturan             Pengaturan[]
+  tipeGaji               TipeGaji[]
 }
 
 model Karyawan {
-  id           Int      @id @default(autoincrement())
-  telegram_id  BigInt   @unique
+  id           Int       @id @default(autoincrement())
+  telegram_id  BigInt    @unique
   nama_lengkap String
   jabatan      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  absensi      Absensi[]
-
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   tipeGajiId   Int?
   tipeGaji     TipeGaji? @relation(fields: [tipeGajiId], references: [id])
-
-  // DITAMBAHKAN: Relasi ke User pemilik
+  absensi      Absensi[]
   userId       Int
-  user         User     @relation(fields: [userId], references: [id])
+  // DIUBAH: Menambahkan onDelete: Cascade agar data karyawan terhapus jika user dihapus
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Absensi {
@@ -48,36 +55,32 @@ model Absensi {
   longitude  Float
   createdAt  DateTime @default(now())
   karyawanId Int
+  // DIUBAH: Menambahkan onDelete: Cascade agar data absensi terhapus jika karyawan dihapus
   karyawan   Karyawan @relation(fields: [karyawanId], references: [id], onDelete: Cascade)
 }
 
 model Pengaturan {
   id        Int     @id @default(autoincrement())
-  nama      String  // Tidak lagi unik secara global
+  nama      String
   nilai     String
   deskripsi String?
-
-  // DITAMBAHKAN: Relasi ke User pemilik
   userId    Int
-  user      User    @relation(fields: [userId], references: [id])
+  // DIUBAH: Menambahkan onDelete: Cascade agar data pengaturan terhapus jika user dihapus
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Pengaturan sekarang unik per user
   @@unique([nama, userId])
 }
 
 model TipeGaji {
-  id                  Int      @id @default(autoincrement())
-  nama                String
-  model_perhitungan   String
-  nilai_gaji_dasar    Float?
+  id                   Int        @id @default(autoincrement())
+  nama                 String
+  model_perhitungan    String
+  nilai_gaji_dasar     Float?
   potongan_tidak_masuk Float?
   tarif_lembur_per_jam Float?
-  
-  aturan_tarif_per_jam String?  @db.Text
-
-  karyawan            Karyawan[]
-
-  // DITAMBAHKAN: Relasi ke User pemilik
-  userId              Int
-  user                User     @relation(fields: [userId], references: [id])
+  aturan_tarif_per_jam String?    @db.Text
+  userId               Int
+  // DIUBAH: Menambahkan onDelete: Cascade agar data tipe gaji terhapus jika user dihapus
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  karyawan             Karyawan[]
 }
