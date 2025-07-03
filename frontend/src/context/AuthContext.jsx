@@ -11,25 +11,31 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // GANTI useEffect yang lama dengan ini
   useEffect(() => {
-    const validateToken = () => {
-      if (token) {
+    const validateSession = async () => {
+      const storedToken = sessionStorage.getItem('authToken');
+      if (storedToken) {
         try {
-          // DIUBAH: Mengambil data user dari sessionStorage
-          const storedUser = JSON.parse(sessionStorage.getItem('user'));
-          if (storedUser) {
-            setUser(storedUser);
-          } else {
-            logout();
-          }
-        } catch (e) {
+          // Panggil endpoint /me untuk memvalidasi token & mendapatkan data user terbaru
+          const response = await apiClient.get('/auth/me');
+          const userData = response.data;
+          
+          // Jika sukses, perbarui state dan sessionStorage
+          setUser(userData);
+          sessionStorage.setItem('user', JSON.stringify(userData));
+          
+        } catch (error) {
+          // Jika ada error (misal: token tidak valid, user dihapus), logout paksa
+          console.error("Validasi sesi gagal, membersihkan sesi...");
           logout();
         }
       }
       setLoading(false);
     };
-    validateToken();
-  }, [token]);
+
+    validateSession();
+  }, []); // Hapus [token] agar ini hanya berjalan sekali saat komponen mount
 
   const login = async (email, password) => {
     try {

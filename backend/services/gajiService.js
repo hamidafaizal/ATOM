@@ -3,6 +3,34 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
+ * Fungsi helper baru untuk pembulatan waktu.
+ * @param {Date} date - Objek tanggal yang akan dibulatkan.
+ * @param {'up' | 'down'} direction - Arah pembulatan ('up' atau 'down').
+ * @returns {Date} - Objek tanggal baru yang sudah dibulatkan.
+ */
+function roundTimeToNearestQuarter(date, direction) {
+    const minutes = date.getMinutes();
+    const roundedMinutes = direction === 'up'
+        ? Math.ceil(minutes / 15) * 15
+        : Math.floor(minutes / 15) * 15;
+
+    // Buat objek Date baru untuk menghindari mutasi objek asli
+    const newDate = new Date(date.getTime());
+    newDate.setMinutes(roundedMinutes);
+    newDate.setSeconds(0);
+    newDate.setMilliseconds(0);
+
+    // Jika pembulatan menit menghasilkan 60 (misal: ceil(50/15)*15),
+    // tambahkan 1 jam dan set menit ke 0.
+    if (roundedMinutes === 60) {
+        newDate.setHours(newDate.getHours() + 1);
+        newDate.setMinutes(0);
+    }
+    
+    return newDate;
+}
+
+/**
  * Helper function untuk mengubah string waktu "HH:mm" menjadi total menit dari tengah malam.
  * @param {string} timeString - String waktu, contoh: "08:30".
  * @returns {number} Total menit.
@@ -47,10 +75,13 @@ function processAbsensiIntoSessions(absensiRecords, mode) {
         for (const abs of sortedAbsensi) {
             if (abs.tipe === 'MASUK') {
                 if (!lastMasuk) {
-                    lastMasuk = abs.createdAt;
+                    // Bulatkan waktu masuk KE ATAS
+                    lastMasuk = roundTimeToNearestQuarter(abs.createdAt, 'up');
                 }
             } else if (abs.tipe === 'KELUAR' && lastMasuk) {
-                sessions.push({ masuk: lastMasuk, keluar: abs.createdAt });
+                // Bulatkan waktu keluar KE BAWAH
+                const roundedKeluar = roundTimeToNearestQuarter(abs.createdAt, 'down');
+                sessions.push({ masuk: lastMasuk, keluar: roundedKeluar });
                 lastMasuk = null; 
             }
         }
@@ -67,8 +98,14 @@ function processAbsensiIntoSessions(absensiRecords, mode) {
 
         for (const date in dailyData) {
             if (dailyData[date].masuks.length > 0 && dailyData[date].keluars.length > 0) {
-                const masuk = dailyData[date].masuks[0]; 
-                const keluar = dailyData[date].keluars[dailyData[date].keluars.length - 1];
+                // Ambil absensi masuk paling awal dan keluar paling akhir
+                const masukMentah = dailyData[date].masuks[0]; 
+                const keluarMentah = dailyData[date].keluars[dailyData[date].keluars.length - 1];
+                
+                // Bulatkan waktu masuk KE ATAS dan waktu keluar KE BAWAH
+                const masuk = roundTimeToNearestQuarter(masukMentah, 'up');
+                const keluar = roundTimeToNearestQuarter(keluarMentah, 'down');
+
                 sessions.push({ masuk, keluar });
             }
         }
@@ -77,7 +114,7 @@ function processAbsensiIntoSessions(absensiRecords, mode) {
 }
 
 
-export async function calculateSalary(karyawanId, startDate, endDate) {
+async function calculateSalary(karyawanId, startDate, endDate) {
     const karyawan = await prisma.karyawan.findUnique({
         where: { id: karyawanId },
         include: { tipeGaji: true },
@@ -168,23 +205,43 @@ export async function calculateSalary(karyawanId, startDate, endDate) {
 
         case 'BULANAN': {
             const workSessions = processAbsensiIntoSessions(absensiRecords, 'single-session-daily');
-            
+            const gajiPokok = tipeGaji.nilai_gaji_dasar || 0;
+            const tarifLemburPerMenit = (tipeGaji.tarif_lembur_per_jam || 0) / 60;
+            const standarKerjaMenit = 9 * 60; // Standar 9 jam kerja
+
+            let gajiDariJamKerja = 0;
+            let gajiLemburTotal = 0;
+
+            // Jika tidak ada sesi kerja sama sekali, gaji untuk periode ini adalah 0
+            if (workSessions.length === 0) {
+                totalGaji = 0;
+                break;
+            }
+
             const year = startDate.getFullYear();
             const month = startDate.getMonth() + 1;
             const jumlahHariKerjaSebulan = getWorkingDaysInMonth(year, month);
             
-            const gajiPokok = tipeGaji.nilai_gaji_dasar || 0;
-            
-            if (jumlahHariKerjaSebulan === 0) {
-                totalGaji = 0;
-            } else {
-                // DIUBAH: Logika prorata diterapkan
+            if (jumlahHariKerjaSebulan > 0) {
                 const upahPerHari = gajiPokok / jumlahHariKerjaSebulan;
-                const jumlahHariMasuk = workSessions.length;
-                totalGaji = jumlahHariMasuk * upahPerHari;
+                const upahPerMenitNormal = upahPerHari / standarKerjaMenit;
+
+                for (const session of workSessions) {
+                    const durasiMenit = (session.keluar - session.masuk) / (1000 * 60);
+
+                    if (durasiMenit > 0) {
+                        const menitNormal = Math.min(durasiMenit, standarKerjaMenit);
+                        gajiDariJamKerja += menitNormal * upahPerMenitNormal;
+
+                        if (durasiMenit > standarKerjaMenit) {
+                            const menitLembur = durasiMenit - standarKerjaMenit;
+                            gajiLemburTotal += menitLembur * tarifLemburPerMenit;
+                        }
+                    }
+                }
             }
             
-            // Di masa depan, logika lembur bisa ditambahkan di sini
+            totalGaji = gajiDariJamKerja + gajiLemburTotal;
             break;
         }
 
@@ -200,3 +257,5 @@ export async function calculateSalary(karyawanId, startDate, endDate) {
         totalGaji: Math.round(totalGaji),
     };
 }
+
+export { calculateSalary, processAbsensiIntoSessions };

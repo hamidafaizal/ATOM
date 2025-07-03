@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 
 // Impor layanan dan rute baru
-import { calculateSalary } from './services/gajiService.js';
+import { calculateSalary, processAbsensiIntoSessions } from './services/gajiService.js';
 import { verifyJwt } from './services/securityService.js';
 import authRoutes from './routes/authRoutes.js';
 import { initializeAllBots } from './services/botManager.js'; // DIUBAH
@@ -255,6 +255,7 @@ app.get('/api/dashboard/summary', async (req, res) => {
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
 
+        // --- Perhitungan Total Karyawan & Hadir Hari Ini (Tetap sama) ---
         const totalKaryawan = await prisma.karyawan.count({ where: { userId: req.userId } });
         
         const startOfToday = new Date();
@@ -272,16 +273,46 @@ app.get('/api/dashboard/summary', async (req, res) => {
         });
         const hadirHariIni = hadirHariIniResult.length;
 
-        const allKaryawan = await prisma.karyawan.findMany({ where: { userId: req.userId, tipeGajiId: { not: null } } });
-        let totalGajiBulanIni = 0;
+        // --- Perhitungan Total Gaji (Tetap sama) ---
+        const allKaryawanGaji = await prisma.karyawan.findMany({ where: { userId: req.userId, tipeGajiId: { not: null } } });
+        const salaryPromises = allKaryawanGaji.map(k => calculateSalary(k.id, startOfMonth, endOfMonth));
+        const salaryResults = await Promise.all(salaryPromises);
+        const totalGajiBulanIni = salaryResults.reduce((sum, result) => sum + result.totalGaji, 0);
         
-        const salaryPromises = allKaryawan.map(k => calculateSalary(k.id, startOfMonth, endOfMonth));
-        const results = await Promise.all(salaryPromises);
-        
-        totalGajiBulanIni = results.reduce((sum, result) => sum + result.totalGaji, 0);
+        // --- LOGIKA BARU: Perhitungan Rata-rata Jam Kerja ---
+        const absensiBulanIni = await prisma.absensi.findMany({
+            where: {
+                karyawan: { userId: req.userId },
+                createdAt: { gte: startOfMonth, lte: endOfMonth }
+            }
+        });
 
-        res.json({ totalKaryawan, hadirHariIni, totalGajiBulanIni, rataRataJamKerja: 0 });
-    } catch (error) { res.status(500).json({ message: error.message }); }
+        const workSessions = processAbsensiIntoSessions(absensiBulanIni, 'single-session-daily');
+        
+        let totalMenitKerja = 0;
+        if (workSessions.length > 0) {
+            totalMenitKerja = workSessions.reduce((total, session) => {
+                const durasiMenit = (session.keluar - session.masuk) / (1000 * 60);
+                return total + (durasiMenit > 0 ? durasiMenit : 0);
+            }, 0);
+        }
+        
+        const rataRataJamKerja = workSessions.length > 0
+            ? (totalMenitKerja / workSessions.length) / 60
+            : 0;
+
+        // --- Kirim Respons dengan data yang sudah dihitung ---
+        res.json({ 
+            totalKaryawan, 
+            hadirHariIni, 
+            totalGajiBulanIni, 
+            rataRataJamKerja: parseFloat(rataRataJamKerja.toFixed(1)) 
+        });
+
+    } catch (error) { 
+        console.error("Error di /dashboard/summary:", error);
+        res.status(500).json({ message: error.message }); 
+    }
 });
 
 app.get('/api/dashboard/aktivitas-terbaru', async (req, res) => {
@@ -322,6 +353,46 @@ app.get('/api/gaji/rincian-bulan-ini', async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ message: 'Gagal mengambil rincian gaji', error: error.message });
+    }
+});
+
+app.get('/api/gaji/slip-status', async (req, res) => {
+    try {
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+        const allKaryawan = await prisma.karyawan.findMany({
+            where: { userId: req.userId },
+            orderBy: { nama_lengkap: 'asc' },
+            include: { tipeGaji: true }
+        });
+
+        const statusPromises = allKaryawan.map(async (karyawan) => {
+            if (!karyawan.tipeGaji) {
+                return {
+                    id: karyawan.id,
+                    nama: karyawan.nama_lengkap,
+                    jabatan: karyawan.jabatan || 'N/A',
+                    status: 'Menunggu' // Atau 'Tipe Gaji Belum Diatur'
+                };
+            }
+
+            const salaryData = await calculateSalary(karyawan.id, startOfMonth, endOfMonth);
+            return {
+                id: karyawan.id,
+                nama: karyawan.nama_lengkap,
+                jabatan: karyawan.jabatan || 'N/A',
+                status: salaryData.totalGaji > 0 ? 'Tersedia' : 'Menunggu'
+            };
+        });
+
+        const results = await Promise.all(statusPromises);
+        res.json(results);
+
+    } catch (error) {
+        console.error("Error di /gaji/slip-status:", error);
+        res.status(500).json({ message: 'Gagal mengambil status slip gaji', error: error.message });
     }
 });
 

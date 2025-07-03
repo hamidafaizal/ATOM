@@ -137,4 +137,34 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.get('/me', async (req, res) => {
+    // req.userId sudah disediakan oleh authMiddleware
+    if (!req.userId) {
+        return res.status(401).json({ message: 'Tidak ada sesi aktif.' });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId },
+            select: { // Hanya pilih data yang aman untuk dikirim ke frontend
+                id: true,
+                email: true,
+                namaPerusahaan: true,
+                emailVerifiedAt: true,
+            }
+        });
+
+        if (!user) {
+            // Seharusnya tidak terjadi jika token valid, tapi sebagai pengaman
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        res.json(user);
+
+    } catch (error) {
+        console.error('Error saat mengambil data user (/me):', error);
+        res.status(500).json({ message: 'Terjadi kesalahan pada server.' });
+    }
+});
+
 export default router;
