@@ -18,11 +18,27 @@ const DetailItem = ({ label, value, onEdit, isEditable }) => (
   </div>
 );
 
+// GANTI SELURUH KOMPONEN AbsensiRow DENGAN INI
 const AbsensiRow = ({ item, onSave, onDelete }) => {
+    // Gunakan waktu yang SUDAH DIBULATKAN dari backend untuk tampilan dan edit
+    const masukDate = item.masukDibulatkan ? new Date(item.masukDibulatkan) : null;
+    const keluarDate = item.keluarDibulatkan ? new Date(item.keluarDibulatkan) : null;
+
+    // Ambil waktu ASLI untuk ditampilkan di tooltip
+    const masukAsliDate = item.masuk ? new Date(item.masuk) : null;
+    const keluarAsliDate = item.keluar ? new Date(item.keluar) : null;
+
+    const formatToTimeInput = (date) => {
+        if (!date) return '';
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
+
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({
-        jamMasuk: item.masuk !== '-' ? item.masuk : '',
-        jamKeluar: item.keluar !== '-' ? item.keluar : '',
+        jamMasuk: formatToTimeInput(masukDate),
+        jamKeluar: formatToTimeInput(keluarDate),
     });
 
     const handleInputChange = (e) => {
@@ -30,14 +46,18 @@ const AbsensiRow = ({ item, onSave, onDelete }) => {
     };
 
     const handleSave = async () => {
-        await onSave({ ...item, ...editData });
+        // Bug fix dari sebelumnya, pastikan tanggal dikirim saat menyimpan
+        const tanggalAbsen = item.masuk.split('T')[0];
+        await onSave({ ...item, ...editData, tanggal: tanggalAbsen });
         setIsEditing(false);
     };
 
     if (isEditing) {
         return (
             <tr className="bg-primary-50 dark:bg-primary-900/50">
-                <td className="p-3 text-sm text-gray-800 dark:text-gray-200">{item.hari}</td>
+                <td className="p-3 text-sm text-gray-800 dark:text-gray-200">
+                    {masukDate ? masukDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'}
+                </td>
                 <td className="p-2"><input type="time" name="jamMasuk" value={editData.jamMasuk} onChange={handleInputChange} className="w-full bg-transparent rounded p-1" /></td>
                 <td className="p-2"><input type="time" name="jamKeluar" value={editData.jamKeluar} onChange={handleInputChange} className="w-full bg-transparent rounded p-1" /></td>
                 <td className="p-3 text-sm text-gray-600 dark:text-gray-300">{item.status}</td>
@@ -52,9 +72,15 @@ const AbsensiRow = ({ item, onSave, onDelete }) => {
 
     return (
         <tr>
-            <td className="p-3 text-sm text-gray-800 dark:text-gray-200">{item.hari}</td>
-            <td className="p-3 text-sm text-gray-600 dark:text-gray-300">{item.masuk}</td>
-            <td className="p-3 text-sm text-gray-600 dark:text-gray-300">{item.keluar}</td>
+            <td className="p-3 text-sm text-gray-800 dark:text-gray-200" title={`Waktu asli: ${masukAsliDate ? masukAsliDate.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit', second: '2-digit'}) : ''}`}>
+                {masukDate ? masukDate.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
+            </td>
+            <td className="p-3 text-sm text-gray-600 dark:text-gray-300" title={`Waktu asli: ${masukAsliDate ? masukAsliDate.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit', second: '2-digit'}) : ''}`}>
+                {masukDate ? masukDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
+            </td>
+            <td className="p-3 text-sm text-gray-600 dark:text-gray-300" title={`Waktu asli: ${keluarAsliDate ? keluarAsliDate.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit', second: '2-digit'}) : ''}`}>
+                {keluarDate ? keluarDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
+            </td>
             <td className="p-3 text-sm text-gray-600 dark:text-gray-300">{item.status}</td>
             <td className="p-3 text-sm font-semibold text-gray-800 dark:text-gray-200">{item.total}</td>
             <td className="p-3 flex items-center gap-1">
@@ -90,12 +116,22 @@ const AbsensiTable = ({ karyawanId }) => {
 
     const handleSave = async (data) => {
         try {
-            await apiClient.post('/absensi/harian', { ...data, karyawanId });
-            toast.success('Absensi berhasil disimpan.'); // DIUBAH
+            // Ambil tanggal dari 'data.masuk' yang formatnya ISO string.
+            // Kita hanya butuh bagian tanggalnya saja (YYYY-MM-DD) untuk dikirim.
+            const tanggalAbsen = data.masuk.split('T')[0];
+
+            // Kirim payload ke backend dengan menyertakan 'tanggal' secara eksplisit
+            await apiClient.post('/absensi/harian', { 
+                ...data, 
+                karyawanId, 
+                tanggal: tanggalAbsen // <-- INI PERBAIKANNYA
+            });
+
+            toast.success('Absensi berhasil disimpan.');
             fetchAbsensi(); 
         } catch (error) {
             console.error("Gagal menyimpan absensi:", error);
-            toast.error("Gagal menyimpan absensi."); // DIUBAH
+            toast.error("Gagal menyimpan absensi.");
         }
     };
 

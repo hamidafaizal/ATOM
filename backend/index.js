@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 
 // Impor layanan dan rute baru
-import { calculateSalary, processAbsensiIntoSessions } from './services/gajiService.js';
+import { calculateSalary, processAbsensiIntoSessions, roundTimeToNearestQuarter } from './services/gajiService.js';
 import { verifyJwt } from './services/securityService.js';
 import authRoutes from './routes/authRoutes.js';
 import { initializeAllBots } from './services/botManager.js'; // DIUBAH
@@ -162,11 +162,16 @@ app.get('/api/karyawan/:id', async (req, res) => {
 
         const laporanAbsensi = sessions.map(session => {
             const { masuk, keluar } = session;
-            let totalMenit = 0;
             let status = 'Invalid';
 
-            if (masuk && keluar) {
-                const diffMs = keluar.createdAt - masuk.createdAt;
+            // Lakukan pembulatan waktu di sini
+            const masukDibulatkan = masuk ? roundTimeToNearestQuarter(masuk.createdAt, 'up') : null;
+            const keluarDibulatkan = keluar ? roundTimeToNearestQuarter(keluar.createdAt, 'down') : null;
+
+            // Hitung total menit berdasarkan waktu yang SUDAH DIBULATKAN
+            let totalMenit = 0;
+            if (masukDibulatkan && keluarDibulatkan) {
+                const diffMs = keluarDibulatkan - masukDibulatkan;
                 if (diffMs >= 0) {
                     totalMenit = diffMs / (1000 * 60);
                     status = 'Valid';
@@ -176,14 +181,14 @@ app.get('/api/karyawan/:id', async (req, res) => {
             return {
                 idMasuk: masuk.id,
                 idKeluar: keluar ? keluar.id : null,
-                tanggal: masuk.createdAt.toISOString().split('T')[0],
-                hari: masuk.createdAt.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-                masuk: masuk.createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-                keluar: keluar ? keluar.createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-',
+                masuk: masuk.createdAt.toISOString(), // Waktu asli
+                keluar: keluar ? keluar.createdAt.toISOString() : null, // Waktu asli
+                masukDibulatkan: masukDibulatkan ? masukDibulatkan.toISOString() : null, // Waktu bulat
+                keluarDibulatkan: keluarDibulatkan ? keluarDibulatkan.toISOString() : null, // Waktu bulat
                 status,
-                total: `${(totalMenit / 60).toFixed(1)} jam`,
+                total: `${(totalMenit / 60).toFixed(1)} jam`, // Total jam dari waktu bulat
             };
-        });
+});
         
         res.json({ ...karyawan, telegram_id: karyawan.telegram_id.toString(), laporanAbsensi });
     } catch (error) { res.status(500).json({ message: error.message }); }

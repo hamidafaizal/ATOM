@@ -8,25 +8,21 @@ const prisma = new PrismaClient();
  * @param {'up' | 'down'} direction - Arah pembulatan ('up' atau 'down').
  * @returns {Date} - Objek tanggal baru yang sudah dibulatkan.
  */
+// File: backend/services/gajiService.js
+
 function roundTimeToNearestQuarter(date, direction) {
     const minutes = date.getMinutes();
     const roundedMinutes = direction === 'up'
         ? Math.ceil(minutes / 15) * 15
         : Math.floor(minutes / 15) * 15;
 
-    // Buat objek Date baru untuk menghindari mutasi objek asli
     const newDate = new Date(date.getTime());
     newDate.setMinutes(roundedMinutes);
     newDate.setSeconds(0);
     newDate.setMilliseconds(0);
 
-    // Jika pembulatan menit menghasilkan 60 (misal: ceil(50/15)*15),
-    // tambahkan 1 jam dan set menit ke 0.
-    if (roundedMinutes === 60) {
-        newDate.setHours(newDate.getHours() + 1);
-        newDate.setMinutes(0);
-    }
-    
+    // BLOK IF YANG MENYEBABKAN BUG DIHAPUS DARI SINI
+
     return newDate;
 }
 
@@ -258,4 +254,4 @@ async function calculateSalary(karyawanId, startDate, endDate) {
     };
 }
 
-export { calculateSalary, processAbsensiIntoSessions };
+export { calculateSalary, processAbsensiIntoSessions, roundTimeToNearestQuarter };
