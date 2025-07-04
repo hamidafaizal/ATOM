@@ -226,7 +226,8 @@ app.post('/api/absensi/harian', async (req, res) => {
 
         if (jamMasuk) {
             const [jam, menit] = jamMasuk.split(':');
-            const newDate = new Date(new Date(tgl).setHours(jam, menit, 0, 0));
+            const dateStringWIB = `${tanggal}T${jam}:${menit}:00+07:00`;
+            const newDate = new Date(dateStringWIB);
             if (idMasuk) {
                 await prisma.absensi.update({ where: { id: idMasuk }, data: { createdAt: newDate } });
             } else {
@@ -238,7 +239,8 @@ app.post('/api/absensi/harian', async (req, res) => {
 
         if (jamKeluar) {
             const [jam, menit] = jamKeluar.split(':');
-            const newDate = new Date(new Date(tgl).setHours(jam, menit, 0, 0));
+            const dateStringWIB = `${tanggal}T${jam}:${menit}:00+07:00`;
+            const newDate = new Date(dateStringWIB);
             if (idKeluar) {
                 await prisma.absensi.update({ where: { id: idKeluar }, data: { createdAt: newDate } });
             } else {
